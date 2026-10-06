@@ -1,0 +1,512 @@
+S3-Amysynth in the browser, firmware 6108e97
+
+This page runs the firmware's application code and the AMY synthesis engine
+compiled to WebAssembly with Emscripten. Compiled in: the project's own code
+(MIT), AMY with its patch and sample data (MIT), U8g2 and its X11 misc-fixed
+fonts (BSD-2-Clause; fonts public domain), the Emscripten runtime and musl libc.
+hostsim.data holds AMY's Gamma9001 drum sample banks, distributed as part of AMY.
+AMY describes the set as the Koblo Tokyo drum machines, an 808 SoundFont gap-fill
+and the AG-10 Power Kit.
+Not compiled in: ESP-IDF, TinyUSB, usb_device_uac, LittleFS, NimBLE, miniaudio.
+
+
+==== ATTRIBUTIONS.md ====
+
+# Third-party attributions
+
+This project's own code is released under the MIT License (see `LICENSE`).
+This repository also contains, and the firmware is built against, work by
+others. Each item below keeps its own licence. The MIT License in `LICENSE`
+does not apply to it.
+
+## Included in this repository
+
+| Component | Path | Origin | Licence | Licence text |
+| --- | --- | --- | --- | --- |
+| AMY synthesis engine | `components/amy/`, and the `amy` submodule (unmodified upstream) | [shorepine/amy](https://github.com/shorepine/amy), Brian Whitman and Daniel PW Ellis | MIT | `components/amy/LICENSE` |
+| miniaudio (part of AMY) | `components/amy/src/miniaudio.h` | [mackron/miniaudio](https://github.com/mackron/miniaudio), David Reid | Public domain (Unlicense) or MIT No Attribution, at your choice | end of the file |
+| pico-audio (part of AMY) | `components/amy/src/pico-audio/` | Raspberry Pi (Trading) Ltd. | BSD-3-Clause | file headers |
+| U8g2 display library | `components/u8g2/` | [olikraus/u8g2](https://github.com/olikraus/u8g2), Oliver Kraus | BSD-2-Clause | `components/u8g2/LICENSE` |
+| usb_device_uac | `components/usb_device_uac/` | [espressif/esp-iot-solution](https://github.com/espressif/esp-iot-solution), Espressif Systems | Apache-2.0 | `components/usb_device_uac/license.txt` |
+| Button glue | `components/my_buttons/` | based on Espressif Systems example code | Apache-2.0 | file headers; full text in `components/usb_device_uac/license.txt` |
+| GCC LTO helper | `cmake/gcc_lto.cmake` | adapted from `gcc.cmake` in [espressif/cmake_utilities](https://components.espressif.com/components/espressif/cmake_utilities), Espressif Systems | Apache-2.0 | full text in `components/usb_device_uac/license.txt` |
+
+Notes:
+
+- **AMY is modified.** The copy in `components/amy/` carries local changes,
+  marked `// LOCAL EDIT` in the source and listed in `AMY-EDITS.md`. The `amy`
+  submodule is the unmodified upstream it is compared against.
+- **usb_device_uac is modified.** The changes are listed in `UAC-EDITS.md`.
+- **Fonts.** The firmware uses three U8g2 fonts: `u8g2_font_4x6`,
+  `u8g2_font_5x7` and `u8g2_font_6x10`. They come from the X11 misc-fixed
+  collection, which is in the public domain. The U8g2 source tree contains
+  many more fonts under their own terms; see
+  <https://github.com/olikraus/u8g2/wiki/fntgrp>.
+- **pico-audio** is part of the AMY source tree and is not built for the
+  ESP32-S3.
+- **Sample and patch data** in `components/amy/src/` (PCM samples, the Juno,
+  DX7 and piano patch data) are distributed as part of AMY. The files carry no
+  separate notice.
+
+## Fetched at build time
+
+These are not stored in this repository. The ESP-IDF component manager
+downloads them, and they are compiled into the firmware. Versions are pinned
+in `dependencies.lock`.
+
+| Component | Version | Origin | Licence |
+| --- | --- | --- | --- |
+| ESP-IDF | 6.1.0 | [espressif/esp-idf](https://github.com/espressif/esp-idf), Espressif Systems | Apache-2.0, with bundled third-party components under their own licences |
+| espressif/tinyusb | 0.19.0~3 | [hathach/tinyusb](https://github.com/hathach/tinyusb), Ha Thach, packaged by Espressif | MIT |
+| espressif/button | 4.2.0 | Espressif Systems | Apache-2.0 |
+| espressif/led_strip | 3.0.3 | Espressif Systems | Apache-2.0 |
+| espressif/cmake_utilities | 1.1.1 | Espressif Systems | Apache-2.0 |
+| joltwallet/littlefs | 1.22.3 | [joltwallet/esp_littlefs](https://github.com/joltwallet/esp_littlefs), Brian Pugh | MIT |
+| littlefs (inside joltwallet/littlefs) | bundled | [littlefs-project/littlefs](https://github.com/littlefs-project/littlefs), the littlefs authors and Arm Limited | BSD-3-Clause |
+
+ESP-IDF bundles further third-party software, among it the FreeRTOS kernel
+(MIT) and Apache NimBLE (Apache-2.0). Its full list is at
+<https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/COPYRIGHT.html>.
+
+## Distributing a built firmware image
+
+A firmware binary built from this repository contains code from every
+component above. The MIT, BSD and Apache-2.0 licences require their copyright
+and licence notices to accompany binary distributions, so ship this file and
+the licence texts it points to together with the image.
+
+
+==== LICENSE ====
+
+MIT License
+
+Copyright (c) 2026 Rasmus Tikkanen (rt-rtos)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+==== components/amy/LICENSE ====
+
+MIT License
+
+Copyright (c) 2022 Brian Whitman and Daniel PW Ellis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+==== components/u8g2/LICENSE ====
+
+
+The U8g2lib code (https://github.com/olikraus/u8g2) is licensed under the terms of 
+the new-bsd license (two-clause bsd license).
+See also: http://www.opensource.org/licenses/bsd-license.php
+
+Fonts are licensed under different conditions.
+See 
+	https://github.com/olikraus/u8g2/wiki/fntgrp
+for detailed information on the licensing conditions for each font.
+
+The example code in sys/raspi_gpio/hal will use the bcm2835 lib from Mike McCauley
+which is licensed under GPL V3: http://www.airspayce.com/mikem/bcm2835/
+
+============ X11 Fonts COUR, HELV, NCEN, TIM, SYMB ============
+
+For fonts derived from the following files, the license below applies.
+COURB08.BDF COURB10.BDF COURB12.BDF COURB14.BDF COURB18.BDF 
+COURB24.BDF COURR08.BDF COURR10.BDF COURR12.BDF COURR14.BDF 
+COURR18.BDF COURR24.BDF HELVB08.BDF HELVB10.BDF HELVB12.BDF HELVB14.BDF 
+HELVB18.BDF HELVB24.BDF HELVR08.BDF HELVR10.BDF HELVR12.BDF HELVR14.BDF 
+HELVR18.BDF HELVR24.BDF NCENB08.BDF NCENB10.BDF NCENB12.BDF 
+NCENB14.BDF NCENB18.BDF NCENB24.BDF NCENR08.BDF NCENR10.BDF 
+NCENR12.BDF NCENR14.BDF NCENR18.BDF NCENR24.BDF SYMB08.BDF SYMB10.BDF 
+SYMB12.BDF SYMB14.BDF SYMB18.BDF SYMB24.BDF TIMB08.BDF TIMB10.BDF 
+TIMB12.BDF TIMB14.BDF TIMB18.BDF TIMB24.BDF TIMR08.BDF TIMR10.BDF 
+TIMR12.BDF TIMR14.BDF TIMR18.BDF TIMR24.BDF 
+
+Copyright 1984-1989, 1994 Adobe Systems Incorporated.
+Copyright 1988, 1994 Digital Equipment Corporation.
+
+Adobe is a trademark of Adobe Systems Incorporated which may be
+registered in certain jurisdictions.
+Permission to use these trademarks is hereby granted only in
+association with the images described in this file.
+
+Permission to use, copy, modify, distribute and sell this software
+and its documentation for any purpose and without fee is hereby
+granted, provided that the above copyright notices appear in all
+copies and that both those copyright notices and this permission
+notice appear in supporting documentation, and that the names of
+Adobe Systems and Digital Equipment Corporation not be used in
+advertising or publicity pertaining to distribution of the software
+without specific, written prior permission.  Adobe Systems and
+Digital Equipment Corporation make no representations about the
+suitability of this software for any purpose.  It is provided "as
+is" without express or implied warranty.
+
+
+============ BSD License for U8g2lib Code ============
+
+Universal 8bit Graphics Library (https://github.com/olikraus/u8g2)
+
+Copyright (c) 2016, olikraus@gmail.com
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, 
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list 
+  of conditions and the following disclaimer.
+  
+* Redistributions in binary form must reproduce the above copyright notice, this 
+  list of conditions and the following disclaimer in the documentation and/or other 
+  materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT 
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+
+
+
+==== Emscripten: LICENSE ====
+
+Emscripten is available under 2 licenses, the MIT license and the
+University of Illinois/NCSA Open Source License.
+
+Both are permissive open source licenses, with little if any
+practical difference between them.
+
+The reason for offering both is that (1) the MIT license is
+well-known, while (2) the University of Illinois/NCSA Open Source
+License allows Emscripten's code to be integrated upstream into
+LLVM, which uses that license, should the opportunity arise.
+
+The full text of both licenses follows.
+
+==============================================================================
+
+Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+==============================================================================
+
+Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+"Software"), to deal with the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+    Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimers.
+
+    Redistributions in binary form must reproduce the above
+    copyright notice, this list of conditions and the following disclaimers
+    in the documentation and/or other materials provided with the
+    distribution.
+
+    Neither the names of Mozilla,
+    nor the names of its contributors may be used to endorse
+    or promote products derived from this Software without specific prior
+    written permission. 
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
+
+==============================================================================
+
+This program uses portions of Node.js source code located in src/library_path.js,
+in accordance with the terms of the MIT license. Node's license follows:
+
+    """
+        Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to
+        deal in the Software without restriction, including without limitation the
+        rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+        sell copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+        IN THE SOFTWARE.
+    """
+
+The musl libc project is bundled in this repo, and it has the MIT license, see
+system/lib/libc/musl/COPYRIGHT
+
+The third_party/ subdirectory contains code with other licenses. None of it is
+used by default, but certain options use it (e.g., the optional closure compiler
+flag will run closure compiler from third_party/).
+
+
+
+==== Emscripten: system/lib/libc/musl/COPYRIGHT ====
+
+musl as a whole is licensed under the following standard MIT license:
+
+----------------------------------------------------------------------
+Copyright © 2005-2020 Rich Felker, et al.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+----------------------------------------------------------------------
+
+Authors/contributors include:
+
+A. Wilcox
+Ada Worcester
+Alex Dowad
+Alex Suykov
+Alexander Monakov
+Andre McCurdy
+Andrew Kelley
+Anthony G. Basile
+Aric Belsito
+Arvid Picciani
+Bartosz Brachaczek
+Benjamin Peterson
+Bobby Bingham
+Boris Brezillon
+Brent Cook
+Chris Spiegel
+Clément Vasseur
+Daniel Micay
+Daniel Sabogal
+Daurnimator
+David Carlier
+David Edelsohn
+Denys Vlasenko
+Dmitry Ivanov
+Dmitry V. Levin
+Drew DeVault
+Emil Renner Berthing
+Fangrui Song
+Felix Fietkau
+Felix Janda
+Gianluca Anzolin
+Hauke Mehrtens
+He X
+Hiltjo Posthuma
+Isaac Dunham
+Jaydeep Patil
+Jens Gustedt
+Jeremy Huntwork
+Jo-Philipp Wich
+Joakim Sindholt
+John Spencer
+Julien Ramseier
+Justin Cormack
+Kaarle Ritvanen
+Khem Raj
+Kylie McClain
+Leah Neukirchen
+Luca Barbato
+Luka Perkov
+Lynn Ochs
+M Farkas-Dyck (Strake)
+Mahesh Bodapati
+Markus Wichmann
+Masanori Ogino
+Michael Clark
+Michael Forney
+Mikhail Kremnyov
+Natanael Copa
+Nicholas J. Kain
+orc
+Pascal Cuoq
+Patrick Oppenlander
+Petr Hosek
+Petr Skocik
+Pierre Carrier
+Reini Urban
+Rich Felker
+Richard Pennington
+Ryan Fairfax
+Samuel Holland
+Segev Finer
+Shiz
+sin
+Solar Designer
+Stefan Kristiansson
+Stefan O'Rear
+Szabolcs Nagy
+Timo Teräs
+Trutz Behn
+Will Dietz
+William Haddon
+William Pitcock
+
+Portions of this software are derived from third-party works licensed
+under terms compatible with the above MIT license:
+
+The TRE regular expression implementation (src/regex/reg* and
+src/regex/tre*) is Copyright © 2001-2008 Ville Laurikari and licensed
+under a 2-clause BSD license (license text in the source files). The
+included version has been heavily modified by Rich Felker in 2012, in
+the interests of size, simplicity, and namespace cleanliness.
+
+Much of the math library code (src/math/* and src/complex/*) is
+Copyright © 1993,2004 Sun Microsystems or
+Copyright © 2003-2011 David Schultz or
+Copyright © 2003-2009 Steven G. Kargl or
+Copyright © 2003-2009 Bruce D. Evans or
+Copyright © 2008 Stephen L. Moshier or
+Copyright © 2017-2018 Arm Limited
+and labelled as such in comments in the individual source files. All
+have been licensed under extremely permissive terms.
+
+The ARM memcpy code (src/string/arm/memcpy.S) is Copyright © 2008
+The Android Open Source Project and is licensed under a two-clause BSD
+license. It was taken from Bionic libc, used on Android.
+
+The AArch64 memcpy and memset code (src/string/aarch64/*) are
+Copyright © 1999-2019, Arm Limited.
+
+The implementation of DES for crypt (src/crypt/crypt_des.c) is
+Copyright © 1994 David Burren. It is licensed under a BSD license.
+
+The implementation of blowfish crypt (src/crypt/crypt_blowfish.c) was
+originally written by Solar Designer and placed into the public
+domain. The code also comes with a fallback permissive license for use
+in jurisdictions that may not recognize the public domain.
+
+The smoothsort implementation (src/stdlib/qsort.c) is Copyright © 2011
+Lynn Ochs and is licensed under an MIT-style license.
+
+The x86_64 port was written by Nicholas J. Kain and is licensed under
+the standard MIT terms.
+
+The mips and microblaze ports were originally written by Richard
+Pennington for use in the ellcc project. The original code was adapted
+by Rich Felker for build system and code conventions during upstream
+integration. It is licensed under the standard MIT terms.
+
+The mips64 port was contributed by Imagination Technologies and is
+licensed under the standard MIT terms.
+
+The powerpc port was also originally written by Richard Pennington,
+and later supplemented and integrated by John Spencer. It is licensed
+under the standard MIT terms.
+
+All other files which have no copyright comments are original works
+produced specifically for use as part of this library, written either
+by Rich Felker, the main author of the library, or by one or more
+contibutors listed above. Details on authorship of individual files
+can be found in the git version control history of the project. The
+omission of copyright and license comments in each file is in the
+interest of source tree size.
+
+In addition, permission is hereby granted for all public header files
+(include/* and arch/*/bits/*) and crt files intended to be linked into
+applications (crt/*, ldso/dlstart.c, and arch/*/crt_arch.h) to omit
+the copyright notice and permission notice otherwise required by the
+license, and to use these files without any requirement of
+attribution. These files include substantial contributions from:
+
+Bobby Bingham
+John Spencer
+Nicholas J. Kain
+Rich Felker
+Richard Pennington
+Stefan Kristiansson
+Szabolcs Nagy
+
+all of whom have explicitly granted such permission.
+
+This file previously contained text expressing a belief that most of
+the files covered by the above exception were sufficiently trivial not
+to be subject to copyright, resulting in confusion over whether it
+negated the permissions granted in the license. In the spirit of
+permissive licensing, and of not having licensing issues being an
+obstacle to adoption, that text has been removed.
