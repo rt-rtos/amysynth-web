@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="firmware-version" content="6108e97">
+<meta name="firmware-version" content="sync-1.2.163-76-gc65e63c9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>S3-Amysynth in the browser</title>
 <link rel="icon" href="data:,">
@@ -46,6 +46,13 @@
   .meter { position:relative; flex:1; max-width:320px; height:8px; background:#101216; border:1px solid var(--line); border-radius:4px; overflow:hidden; }
   #loadAvg { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--a); }
   #loadMax { position:absolute; top:0; bottom:0; width:2px; left:0; background:var(--m); }
+  #screen { position:relative; max-width:768px; }
+  #picker { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:10px; padding:16px; background:rgba(0,0,0,.86); border-radius:4px; text-align:center; }
+  #picker h3 { margin:0; font-size:15px; color:#ffd23f; letter-spacing:.04em; }
+  #picker p { margin:0; font-size:12px; }
+  .tpl { display:grid; grid-template-columns:repeat(auto-fill, minmax(116px, 1fr)); gap:8px; width:100%; max-width:560px; }
+  .tpl button { padding:10px 4px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -53,13 +60,22 @@
 <main>
   <section id="device" tabindex="0">
     <h2>OLED <span>- 128 x 64, the firmware's frame buffer as last flushed</span></h2>
-    <canvas id="oled" width="768" height="384"></canvas>
+    <div id="screen">
+      <canvas id="oled" width="768" height="384"></canvas>
+      <div id="picker" hidden>
+        <h3>PICK A TEMPLATE</h3>
+        <div class="tpl" id="tplList">Starting the device...</div>
+        <p class="dim">One tap turns the audio on, loads it and plays.
+          <a href="#" id="tplSkip">Start with the boot session instead</a></p>
+      </div>
+    </div>
     <div class="pad" id="pad"></div>
     <div class="chords" id="chords"></div>
     <div class="row">
       <button id="power">Power on</button>
       <button id="pause" disabled>Pause</button>
       <button id="restart">Reboot</button>
+      <button id="templates">Templates</button>
       <button id="shot">Save PNG</button>
       <label class="dim">queue <select id="target">
         <option value="60">60 ms</option><option value="100" selected>100 ms</option>
@@ -507,12 +523,8 @@ function play(bytes) {
  * onended callbacks, so input sent while the queue is full still lands. */
 setInterval(kick, 20);
 
-$('power').onclick = async () => {
-  if (running) {
-    running = false; $('power').textContent = 'Power on'; $('pause').disabled = true;
-    if (actx) { await actx.close(); actx = null; }
-    return;
-  }
+/* Power on must run inside a user gesture: browsers start audio only there. */
+function powerOn() {
   $('err').textContent = '';
   actx = new AudioContext({ sampleRate: RATE, latencyHint: 'interactive' });
   gain = actx.createGain(); gain.gain.value = $('mute').checked ? 0 : 1; gain.connect(actx.destination);
@@ -521,7 +533,12 @@ $('power').onclick = async () => {
   $('power').textContent = 'Power off'; $('pause').disabled = false; $('pause').textContent = 'Pause';
   $('device').focus();
   kick();
-};
+}
+async function powerOff() {
+  running = false; $('power').textContent = 'Power on'; $('pause').disabled = true;
+  if (actx) { await actx.close(); actx = null; }
+}
+$('power').onclick = () => { if (running) powerOff(); else powerOn(); };
 function setPaused(p) {
   paused = p; $('pause').textContent = paused ? 'Resume' : 'Pause';
   if (!paused) { nextTime = 0; lastReq = performance.now(); kick(); }
@@ -560,6 +577,50 @@ $('cmd').addEventListener('keydown', e => {
 });
 $('dump').onclick = () => sendCmd('st.seqdump');
 $('clear').onclick = () => { $('console').textContent = ''; };
+
+/* ── template picker ─────────────────────────────────────────────────────
+ * The built-in templates come from the firmware: "pr.tpl" prints one
+ * "TPL <i> <name>" line per template into the console text. The page shows
+ * the picker over the dark screen until something is picked, and again from
+ * the Templates button. A pick turns the audio on (the tap is the gesture
+ * the browser needs), queues the load, and presses play after the UI task
+ * has applied it: a load stops the transport, and it lands on the next
+ * 50 ms UI frame, so play waits well past that. */
+let templates = null;
+async function listTemplates() {
+  if (!templates) {
+    const st = await backend.step(1, ['cmd 0 pr.tpl']);
+    apply(st);
+    templates = [...(st.console || '').matchAll(/^TPL \d+ (.+)$/gm)].map(m => m[1].trim());
+  }
+  return templates;
+}
+async function showPicker() {
+  const list = $('tplList');
+  $('picker').hidden = false;
+  try {
+    const names = await listTemplates();
+    list.innerHTML = '';
+    for (const name of names) {
+      const b = document.createElement('button');
+      b.textContent = name;
+      b.onclick = () => pickTemplate(name);
+      list.appendChild(b);
+    }
+    if (!names.length) list.textContent = 'This firmware lists no templates.';
+  } catch (e) {
+    list.textContent = String(e.message || e);
+  }
+}
+function pickTemplate(name) {
+  $('picker').hidden = true;
+  if (!running) powerOn(); else if (paused) setPaused(false);
+  sendCmd('pr.tpl ' + name);
+  setTimeout(() => sendCmd('tr.play'), 200);
+}
+$('tplSkip').onclick = e => { e.preventDefault(); $('picker').hidden = true; if (!running) powerOn(); };
+$('templates').onclick = showPicker;
+showPicker();
 </script>
 </body>
 </html>
