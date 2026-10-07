@@ -48,9 +48,14 @@ then open <http://localhost:8000/>.
 | `controls.md` | the device's control scheme |
 | `notices.txt` | third-party notices for everything compiled in |
 
-Built with Emscripten from the firmware sources. The build tooling lives
-beside the firmware's development tools and is not part of the public
-repository.
+Built with Emscripten by
+[amysynth-wasm](https://github.com/rt-rtos/amysynth-wasm), which has the
+firmware as a submodule and compiles its sources unchanged. What that repo
+adds in place of the device (stand-ins for ESP-IDF, FreeRTOS and the board's
+drivers, and the program that runs instead of the firmware's `main.c`) is
+listed file by file in its
+[SHIMS.md](https://github.com/rt-rtos/amysynth-wasm/blob/main/SHIMS.md).
+The version shown in the page is the firmware commit it was built from.
 
 ## Licence
 
