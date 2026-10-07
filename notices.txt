@@ -1,4 +1,4 @@
-S3-Amysynth in the browser, firmware 23829a72
+S3-Amysynth in the browser, firmware d043e6eb
 
 This page runs the firmware's application code and the AMY synthesis engine
 compiled to WebAssembly with Emscripten. Compiled in: the project's own code
