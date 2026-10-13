@@ -7,6 +7,12 @@ WebAssembly from the same sources as the device firmware.
 
 Open it at <https://rt-rtos.github.io/amysynth-web/>.
 
+Two builds are served. The root is the stable channel: a firmware commit
+that was played through on the device before it was promoted. The nightly
+at <https://rt-rtos.github.io/amysynth-web/next/> follows the firmware's
+main branch within the hour, so it has what is being worked on, verified
+only by an automatic replay. Each page names the firmware commit it runs.
+
 ## What runs here
 
 The page runs the device's application code and audio engine. It is not an
@@ -47,6 +53,7 @@ then open <http://localhost:8000/>.
 | `hostsim.data` | AMY's drum sample banks |
 | `controls.md` | the device's control scheme |
 | `notices.txt` | third-party notices for everything compiled in |
+| `next/` | the same files for the nightly channel |
 
 Built with Emscripten by
 [amysynth-wasm](https://github.com/rt-rtos/amysynth-wasm), which has the
