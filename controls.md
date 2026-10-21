@@ -16,14 +16,14 @@ is right and this file is stale.
 | Button 1 | `MY_BUTTON_1` | Hold modifier (acts on press, released on release), or a press action in some views |
 | Button 2 | `MY_BUTTON_2` | Same as button 1 |
 | Button 3 | `MY_BUTTON_3` | Acts on tap |
-| SHOULDER (LB) | `MY_BUTTON_SHOULDER` | Left shoulder button. Acts on press, except the FM page flip and the WT keyframe cycle (tap) |
+| SHOULDER (LB) | `MY_BUTTON_SHOULDER` | Left shoulder button. Acts on press, except the FM page flip, the WT keyframe cycle and the Mixer menu jump (tap); on the ball drop a hold modifier (the encoder steps the cursor by rows) |
 | SHIFT (RB) | `MY_BUTTON_SHIFT` | Right shoulder button. Hold modifier; a bare tap does nothing |
 
 Pin assignments: `components/my_buttons/my_buttons.c` (`s_button_gpios[]`).
 
 ## Screen and overlay precedence
 
-Highest first. The first six are overlays that capture the encoder and all
+Highest first. The first seven are overlays that capture the encoder and all
 button input; the rest are mode screens. Resolved in one place,
 `synth_ui_active_view()` (`components/synth_core/include/synth_ui.h`).
 
@@ -31,9 +31,10 @@ button input; the rest are mode screens. Resolved in one place,
 2. LFO editor
 3. Distortion (DIST) editor
 4. Step Trig popup
-5. ADSR (graph) editor
-6. Menu
-7. Mode screen: Arp, Stutter drone, Normal drone, Prog, FM, DEV, WT, Seq (default at boot)
+5. Ball drop segment popup
+6. ADSR (graph) editor
+7. Menu
+8. Mode screen: Arp, Ball drop, Stutter drone, Normal drone, Prog, FM, DEV, WT, Mixer, Seq (default at boot)
 
 Screens are changed only through the Menu.
 
@@ -41,12 +42,12 @@ Screens are changed only through the Menu.
 
 | Gesture | Action |
 |---|---|
-| SHIFT + Button 0 (press) | Loop bounce: start into the first empty clip slot, cancel one still waiting for its bar line, or stop a running one at the next pattern-period boundary. Works from any screen |
-| SHIFT + Button 0 (hold) | Discard a running bounce |
-| SHIFT + Button 1 | Open the ADSR editor on the current instrument (Seq, Arp, Drone screens, or the Wireless menu page). With an editor open: commit and close it |
-| SHIFT + Button 2 | Sequencer screen, no menu: open the Step Trig popup. Popup open: close it. Filter/LFO/DIST/ADSR editor open: release the open tab to the patch |
-| SHIFT + Button 3 | Sequencer screen, no menu: open the menu on the Layer page, on the row it was left on if the menu was closed on that page's layer entry, else on Gate. Arpeggiator screen, no menu: the same on the page's ARP entry, else on Level. Menu open on the Wireless page: switch to the Layer page's LIVE entry, on Level. Menu open on the Layer page: close it. Filter/LFO/DIST/ADSR editor open on a melodic row: flip the row between its own voice block and the layer's shared block |
-| Button 3 (tap) | Toggle the menu; it reopens on the page and row it was closed on. With an editor open: next editor. With the Step Trig popup open: close it |
+| SHIFT + Button 0 (press) | Sequencer screen, no menu: toggle solo on the selected track. Arpeggiator screen, no menu: toggle the arp's solo. A SOLO / SOLO OFF banner shows the result. Ball drop screen: reroll the seed on the release, unless a turn set a splitter's ratio during the press. Elsewhere: nothing |
+| SHIFT + Button 0 (hold) | Sequencer or Arpeggiator screen, no menu: clear every solo, the arp's included (SOLO CLR banner). Ball drop screen: freeze / unfreeze the seed on the release, unless a turn set a splitter's ratio during the hold. Elsewhere: nothing |
+| SHIFT + Button 1 | Open the ADSR editor on the current instrument (Seq, Arp, Ball drop, Drone screens, or the Wireless menu page; on the Ball drop screen the focused synth, DROP or SUB). With an editor open: commit and close it. Mixer screen: link or unlink the cursor row to the active link group |
+| SHIFT + Button 2 | Sequencer screen, no menu: open the Step Trig popup. Ball drop screen, cursor on a segment: open its segment popup. Popup open: close it. Filter/LFO/DIST/ADSR editor open: release the open tab to the patch |
+| SHIFT + Button 3 | Sequencer screen, no menu: open the menu on the Layer page, on the row it was left on if the menu was closed on that page's layer entry, else on Gate. Arpeggiator screen, no menu: the same on the page's ARP entry, else on Level. Ball drop screen: the same on the entry of the focused synth (DROP or SUB). Drone screens: the same on the drone's entry (STUTTER or DRONE), else on Unison. Menu open on the Wireless page: switch to the Layer page's LIVE entry, on Level. Menu open on the Layer page: close it. Filter/LFO/DIST/ADSR editor open on a melodic row: flip the row between its own voice block and the layer's shared block |
+| Button 3 (tap) | Toggle the menu; it reopens on the page and row it was closed on. With an editor open: next editor. With the Step Trig or segment popup open: close it |
 
 A SHIFT chord is latched on its digit's press and swallows the rest of that
 press, so the button's own tap/hold gesture never fires. A chord whose
@@ -56,7 +57,7 @@ preconditions are not met does nothing.
 
 The bottom line shows `1:<b1> 2:<b2> 3:<b3>` and, in the menu on a sub-page,
 ` LB:Main`; on the FM screen ` LB:Pg2` or ` LB:Pg1` (the page SHOULDER flips
-to); on the WT screen ` LB:Key`. It is read from `ui_view_table[]` (`ui_view_resolve.c`) for the
+to); on the WT screen ` LB:Key`; on the Mixer screen ` LB:Main`. It is read from `ui_view_table[]` (`ui_view_resolve.c`) for the
 active view. SHIFT chords are not shown. The strip is hidden on the Prog
 screen; a DEV status bar replaces it on every screen while on.
 
@@ -64,15 +65,19 @@ screen; a DEV status bar replaces it on every screen while on.
 |---|---|---|---|
 | Seq | Patch | Pitch | Menu |
 | Arp, Stutter, Normal drone | Patch | - | Menu |
+| Ball drop | Focus | Jackpt | Menu (the strip is hidden; the field uses its rows) |
 | FM | Link (page 1), - (page 2) | Mute | Menu (Done while linking) |
 | WT | Copy (- on HRM and the S tab) | Reset (Blend on keyframe M, off HRM; - on the S tab) | Menu |
+| Mixer | Mute | Param (List in PARAM mode) | Menu (Back in a layer's track rows) |
 | Menu | - (Save while naming) | - (Disc while naming) | Menu |
 | Prog | Del | +Add | Menu |
 | DEV | - | - | Menu |
 | ADSR editor | Type | Amp / Swg / Pit / Cut / Drv / Mix / Off (the next stop) | Next |
 | Filter editor | On/Off | - | Next |
-| LFO, DIST editor | - | - | Next |
+| LFO editor | On/Off | +LFO2 while LFO2 is collapsed, -LFO2 while it is open (- where LFO2 is unavailable) | Next |
+| DIST editor | - | - | Next |
 | Step Trig popup | - | - | Close |
+| Ball drop segment popup | - | - | Close |
 
 ## Sequencer screen (Seq)
 
@@ -86,12 +91,13 @@ screen; a DEV status bar replaces it on every screen while on.
 | Button 1 hold + turn | Cycle the patch of the selected track (drum layer: that drum track's patch) |
 | Button 2 hold + turn | Transpose the selected track. Melodic: step through C1..C7 then the defined chord presets. Drum: semitones, clamped 0..127 |
 | SHIFT + turn | Step the active melodic layer's FM algorithm live; a non-FM patch shows a NOT FM banner; drum layers ignore it. Button 1 hold or Button 2 hold take precedence |
+| SHIFT + Button 0 (press / hold) | Toggle solo on the selected track / clear every solo (Global gestures) |
 | Button 3 (tap) | Menu |
 
 ## Step Trig popup
 
 Addressed by the grid cursor (layer, track, step). Eight fields in a
-five-row window that scrolls with the cursor; a ninth, FRM, is listed while
+four-row window that scrolls with the cursor; a ninth, FRM, is listed while
 the track plays a wavetable patch.
 
 | Input | Action |
@@ -133,10 +139,11 @@ Main list rows:
 
 | Kind | Rows |
 |---|---|
-| Screen (runs and closes the menu) | Sequencer, Arpeggiator, Drones (the normal drone, with the stutter drone behind its STUTTER row), Progression, FM (`CONFIG_SYNTH_CUSTOM_FM`), Wavetable (`CONFIG_SYNTH_CUSTOM_WT`), DEV (`CONFIG_SYNTH_DEV_MENU`) |
+| Transport (runs, the menu stays open) | Play / Stop, the first row: the transport toggle (as Button 0 hold). `Stop..` while a stop is armed or fading, when a click cancels it |
+| Screen (runs and closes the menu) | Sequencer, Arpeggiator, Ball Drop, Drones (the normal drone, with the stutter drone behind its STUTTER row), Progression, FM (`CONFIG_SYNTH_CUSTOM_FM`), Wavetable (`CONFIG_SYNTH_CUSTOM_WT`), DEV (`CONFIG_SYNTH_DEV_MENU`) |
 | Action (runs and closes the menu) | Add Layer, Del Layer |
 | Value (click to edit) | BPM, Quant, Scale, Root, Arp, Drone, Stutter, Drum Bank, Volume (5 % steps) |
-| Dive (open a sub-page) | Layer, Chords, Bounce, Prog Gen, FX, Projects (`CONFIG_SYNTH_PROJECT_STORE`), Wireless (`CONFIG_SYNTH_WIRELESS`) |
+| Dive (open a sub-page) | Layer, Chords, Bounce, Prog Gen, FX, Settings, Projects (`CONFIG_SYNTH_PROJECT_STORE`), Wireless (`CONFIG_SYNTH_WIRELESS`) |
 
 Sub-pages use the same click model: value rows edit on click, action rows run
 on click.
@@ -153,11 +160,13 @@ FRM between 1 and 62 also narrows the LFO square into a pulse of that width
 
 | Page | Rows |
 |---|---|
-| Layer | Title `LAYER L<layer>/<layers> T<track>`. Track (the grid's selected track: turning it moves the cursor's row, and the rows below it edit that row), Level (the Track row's volume, 0-100 % in 5 % steps), Key (filter key tracking, 0-100 %, pivot = main menu Root in octave 4; melodic layers), Follow, Repeat, Mute, Solo, ClrSolo (action, present only while something is soloed), Frame (wavetable tracks, see above), Unison (dive, melodic), PCM (dive, drum layer on the PCM engine), then the layer-wide rows Steps, Swing, Patch scope, Gate, Glide, Groove, Chord, Root, Type. Drum layers show `--` for melodic-only rows. The page has two more entries, reached with SHIFT + Button 3. ARP (from the arp screen): Level, Key, Mute, Solo, ClrSolo, Unison (dive), Gate (10-100 %, 5 % steps), Glide. Mute silences the arp without switching it off; Solo makes the arp a member of the solo set, so it plays alongside soloed rows and mutes everything unsoloed. LIVE (from the Wireless page): Level, Key, Unison (dive), Glide; `< Back` returns to the Wireless page. Their Unison page edits the arp's or live voice's own unison, with the same rows and limits as a track's (the arp's is saved with the project, the live voice's lasts the session) |
+| Layer | Title `LAYER L<layer>/<layers> T<track>`. Track (the grid's selected track: turning it moves the cursor's row, and the rows below it edit that row), Level (the Track row's volume, 0-100 % in 5 % steps), Key (filter key tracking, 0-100 %, pivot = main menu Root in octave 4; melodic layers), Follow, Mute, Solo, ClrSolo (action, present only while something is soloed), Frame (wavetable tracks, see above), Unison (dive, melodic), PCM (dive, drum layer on the PCM engine), then the layer-wide rows Steps, Swing, Patch scope, Gate, Glide, Groove, Chord, Root, Type. Drum layers show `--` for melodic-only rows. The page has more entries, reached with SHIFT + Button 3. ARP (from the arp screen): Level, Key, Mute, Solo, ClrSolo, Unison (dive), Gate (10-100 %, 5 % steps), Glide. Mute silences the arp without switching it off; Solo makes the arp a member of the solo set, so it plays alongside soloed rows and mutes everything unsoloed. DROP or SUB (from the Ball drop screen, the focused synth): the same rows, each that synth's own. LIVE (from the Wireless page): Level, Key, Unison (dive), Glide; `< Back` returns to the Wireless page. STUTTER or DRONE (from the stutter or normal drone screen): Unison (dive) alone; the sub drone stays a single sine. Their Unison page edits that voice's own unison, with the same rows and limits as a track's (the arp's, the drop's and the drones' are saved with the project, the live voice's lasts the session) |
+| Unison (dive from the Layer page's Unison row; LAYER scope writes every track, TRACK scope one; the ARP, LIVE, DROP/SUB and drone entries open the same page on their own voice) | Unison (On/Off, one detent; Off keeps every other row), Count (copies per voice, up to the patch's ceiling, steps in multiples of the Stack's note count), Detune (0-99 cents, 1 per detent: the spread of each note's copies; at 0 with more than one copy per note the copies sit at one pitch and comb, so one copy per note is the clean setting there), Stack (the notes the copies are dealt over, one detent each: Off, Oct, Sub, Oct+Sub, 5th, Power (root, fifth, octave), 2xOct, 4th, Major, Minor, Harm3 (1:2:3), Harm4 (1:2:3:4); changing it snaps Count down to a multiple of its note count), Shift (-100..+100 %, 1 % per detent: each note's copies from all flat through centred to all sharp), Spread (0-100 %, stereo width; n/a while Stereo is Off), Blend (0-100 %: level of a note's outer copies, 100 = equal), Stereo (On: each note's copies alternate between a left and a right cluster osc; Off: one centred osc), Phase (Fixed: every note restarts the copies the same way; Random: new start phases for every copy but the first on each note-on, so a note's level and image vary note to note; no effect where an osc carries a single copy, Stack Off at Count 2 with Stereo On). A fresh row reads Off, Oct+Sub, Count 3, Detune 0, so one detent On gives sub, note and octave |
 | Chords | Slot list CH1..CH8; a slot opens Root, Type, Clear. Every edit commits at once and auditions |
 | Bounce | Shape rows (slot, bars, format, tail, after), Rec, Cancel, Undo, four rows per clip slot (play/mute, level, tempo, clear), Sample and its cancel |
 | Prog Gen | Root, Scale, Arp Q, Style, Length, Bars, Ext, Var, Seed, Generate, Undo |
 | FX | Hub: one dive row per AMY bus, plus the Preset FX guard. A bus row opens that bus's page: EQ, echo, chorus, reverb, distortion, Split, trim |
+| Settings | Preset FX, Stop (RING / CUT / CUT 1/4 / FADE), Fade (1/4, 1 BAR, 2 BAR, 4 BAR), Start (TAILS / SILENT), Phrase (OFF, 2, 4, 8, 16, 32 BAR: the bars per phrase of the Mixer header clock, display only; saved with the project) |
 | Projects | Storage line, Templates.., then one row per slot (see below) |
 | Wireless | BLE MIDI on/off (click), Status (read-only), Source (click toggles WAVE / PATCH), Patch (click to edit, turn cycles), Glide (click to edit, 1 ms per detent) |
 
@@ -189,7 +198,7 @@ selected and adjusted with the encoder.
 | Button 1 (press) | Cycle the shown envelope's curve type: Normal, Linear, DX7, TrueExp |
 | Button 2 (press) | Cycle the sub-mode: off, AMP (amplitude trim, 5 % steps; live voice and drones only - a sequencer row sets its level on the Layer page's Level row, the arp on the ARP entry's Level row), SWG (layer swing; melodic rows reading the layer block, EG0 page only), then one stop per routing target PIT / CUT / DRV / MIX on rows carrying the depth matrix. The EG1 page starts straight on the target stops |
 | SHOULDER (press) | Target stop up: flip the sign of that depth |
-| Button 3 (tap) | Next editor: EG0, EG1, Filter, LFO, DIST, back to EG0. Targets without an EG1 page skip it |
+| Button 3 (tap) | Next editor: EG0, EG1, Filter, LFO1, LFO2 (while open), DIST, back to EG0. Targets without an EG1 page skip it |
 | Button 0 (tap) | Commit and close |
 | Button 0 (hold) | Cancel (restores the stored state) and close |
 | SHIFT + Button 1 | Commit and close |
@@ -213,19 +222,39 @@ Live preview: edits sound at once; cancel restores.
 
 ## LFO editor
 
+Every voice has two LFOs. The editor opens on LFO1. LFO2 is collapsed by
+default; Button 2 opens it, which adds an LFO2 page after LFO1 (Button 3
+steps LFO1, LFO2, then DIST). Open and on are separate: Button 2 opens and
+collapses LFO2, Button 1 or the EN chip turns the shown LFO on and off. A
+collapsed LFO2 keeps its settings, and both LFOs are saved with the project.
+LFO2 needs a patch with an LFO target map (not the piano); elsewhere Button 2
+does nothing.
+
 While FILTER is a checked target and the surface's filter is on, the header
 shows the cutoff range the LFO sweeps, as low-high Hz (e.g. "550-2.2k").
+While LFO2 is open, the LFO1 header shows a "2" chip left of EN: inverted
+while LFO2 runs (on, with targets), outlined while it is off. The LFO2 page
+has the same layout under the title LFO2. On a Juno or DX7 patch, whose own
+LFO uses the slot LFO2 takes, the LFO2 page shows a struck "P" chip: LFO2
+replaces the patch LFO while it is open, also while it is off. Collapsing
+LFO2 gives the patch LFO back (a sequencer row reloads its layer for it).
+
+Each target belongs to one LFO. A target the other LFO drives shows that
+LFO's number ("1" or "2") instead of its checkbox; checking it moves the
+target to this LFO.
 
 | Input | Action |
 |---|---|
 | Encoder turn, browsing | Move the cursor (wraps) over the seven target checkboxes (Filter, Amp, Pitch, Pan, Scan, Drive, Mix; the list scrolls, five rows at a time), then Wave, Rate, Depth, Flt oct, Wobble rate, Wobble depth, Wobble mode, Enable |
 | Encoder click | Checkbox, Enable, Wobble mode: toggle / cycle directly. Other rows: enter / leave editing |
 | Encoder turn, editing | Wave and Rate: cycle. Depth: 1 % steps up to 10, then 5 %. Flt oct: quarter octaves. Wobble depth: whole dB |
-| Button 3 (tap) | Next editor |
+| Button 1 (press) | Turn the shown LFO on / off |
+| Button 2 (press) | LFO1 page: open LFO2 (it turns on; its settings are kept) or collapse it. LFO2 page: collapse LFO2 and return to LFO1 |
+| Button 3 (tap) | Next page or editor: LFO1, LFO2 while open, then DIST |
 | Button 0 (tap / hold) | Commit / cancel and close |
-| SHIFT + Button 1 / 2 / 3 | Commit and close / release to patch / flip source |
+| SHIFT + Button 1 / 2 / 3 | Commit and close / release to patch (on the LFO2 page: collapse LFO2) / flip source |
 
-Button 1 and SHOULDER do nothing here.
+SHOULDER does nothing here.
 
 ## DIST editor
 
@@ -235,6 +264,61 @@ Button 1 and SHOULDER do nothing here.
 | Encoder click | Enter / leave editing (every row is multi-value) |
 | Encoder turn, editing | Type: cycle the eight stage sets (OFF is the bypass). Others: one step per detent |
 | Button 3 (tap), Button 0 (tap / hold), SHIFT chords | As in the LFO editor |
+
+## Mixer screen
+
+The overview starts with the transport row, named `PLAY` while stopped and
+`STOP` while playing; its value cell reads `..` while a stop is armed or
+fading. The page opens on the row below it. Then one row per sound source: MAST (master
+volume), DRUM (layer 0), L2..L4 (the melodic layers), ARP, DRON (normal drone), STUT (stutter drone), and LIVE and
+CLP1 / CLP2 while the live voice and those clip slots exist, then FADE, the
+fade length, and LINK, the active link group A..C (both overview only). A
+layer row dives
+into its track rows (the drum layer's by role, LOW..AUX; a melodic layer's
+T1..T5). Each row shows a bar (the fader position) and an M cell: `M` filled
+for the mixer's mute, `m` when only the Layer page's (or the arp's) own mute
+is on. While a row fades, a tick on its bar marks the target. A row in a
+link group shows the group letter at the right end of its bar. A fade on any
+member of a group fades every member the same way, each from its own level,
+from the same bar line; members already there or already heading there are
+left alone. Links are saved with the project. Up to three quick
+cells follow (source rows, the track rows in a layer's dive included), each
+a fixed setting of the row's source; two show at a time, and in PARAM mode
+the two visible cells follow the selection (the ARP row scrolls to RPT). The
+cell shows the value and, while it is selected in PARAM mode, the title
+shows its name (`MIXER  CUT`):
+
+| Row | Q1 | Q2 | Q3 |
+|---|---|---|---|
+| Melodic layer | CUT: every row's filter cutoff, a semitone per detent | GAT: layer gate, the Layer page's Gate steps | - |
+| Drum layer | SWG: layer swing, 2 per detent, 0..66 | - | - |
+| Track (layer dive) | RPT: repeat rate 1, 2, 4, 8 loops, one value per detent, clamped; the row plays its first loop and is silent for the rest | - | - |
+| ARP | OCT: octaves 1..4 | GLD: glide ms, 5 per detent, 0..100 | RPT: repeat rate 1, 2, 4, 8, one value per detent, clamped; one loop is one bar, the arp plays the first bar of every N |
+| STUT | PAT: gate pattern | RT: root note | - |
+| DRON | RT: root note | CUT: filter cutoff, a semitone per detent | - |
+| LIVE | GLD: glide ms, 5 per detent, 0..100 | CUT: filter cutoff, a semitone per detent | - |
+
+| Input | Action |
+|---|---|
+| Encoder turn | LIST mode: move the cursor (clamped); five rows show at a time. PARAM mode, not editing: select among the cursor row's quick cells (clamped, never leaves the row; the two visible cells follow the selection). PARAM mode, editing: step the selected cell (table above), clamped |
+| SHIFT hold + turn | Fader position of the cursor row in 5 % steps, 0..100 (MAST included), in either mode; cancels a fade on that row. PLAY row: nothing. FADE row: the fade length, one step per detent through 1, 2, 4, 8, 16, 32 bars. LINK row: the active link group, A..C (clamped). The bar is inverted while SHIFT is held |
+| Encoder click | LIST mode: on PLAY, the transport toggle (as Button 0 hold); on a layer row, open its track rows; on LINK, clear every link; other rows, nothing. PARAM mode: start / stop editing the selected cell (outlined while selected, filled while editing) |
+| Button 1 (press) | Toggle the mixer mute of the cursor row (not MAST, not PLAY, FADE or LINK) |
+| SHIFT + Button 1 | Put the cursor row in the active link group (LINK row), or take it out when it is already in that group; a row in another group moves to this one. Not PLAY, FADE or LINK |
+| Button 2 (press) | Toggle LIST <-> PARAM mode on the cursor row. Nothing on a row without quick cells (PLAY, MAST, FADE, LINK, the clips). Entering selects the first cell, not editing |
+| SHIFT + Button 2 | Fade the cursor row (MAST included, not PLAY, FADE or LINK), and with it every other member of its link group: from above 0, to 0 over the FADE length from the next bar line (at once while stopped); from 0, back to where the last fade-out started (100 if none). During a fade that has not moved yet (waiting for the bar line): flip it, an out becomes a cut to silence and a fade in from 0 to the old level, an in becomes an out from that level; once it moves: turn it around from where it is, starting at once |
+| Button 3 (tap) | In a layer's track rows: back to the overview, on the row it was opened from, in LIST mode. Elsewhere: menu |
+| SHOULDER (tap) | Open the menu on its main list, from anywhere on the page; an open dive stays, so returning lands where you were |
+| Button 0 (tap / hold) | Cycle the active layer / play-stop |
+
+PARAM mode stays inside the cursor row: the turn cannot move to another row
+until Button 2 returns to LIST mode.
+
+While the transport plays, the header shows the clock at its right as
+`bar.16th`: `1.1` is the first bar line after Play, the 16th counts 1..16,
+and the count-in before it shows as bar 0 (`0.1` .. `0.16`). With the
+Settings page's Phrase set to N bars it reads `phrase:bar.16th`, the bar
+counting 1..N within the phrase (`3:2.4`); the count-in stays `0.x`.
 
 ## Arp screen
 
@@ -247,7 +331,56 @@ Button 1 and SHOULDER do nothing here.
 | Button 0 (hold) | Play / stop. A tap does nothing |
 | Button 2 | Ignored |
 | Button 3 (tap) | Menu |
+| SHIFT + Button 0 (press / hold) | Toggle the arp's solo / clear every solo (Global gestures) |
 | SHIFT + Button 1 | Open the ADSR editor on the arp |
+
+## Ball drop screen
+
+A two-row header in the yellow band over a field of 15 x 8 cells in the
+blue band. Balls drop from the spawner
+(the chevron at the top of column 7, the center) once per Rate; every segment they hit
+plays a note on the DROP synth (the bottom row is Root, each row up Step
+scale degrees higher), and a ball crossing the jackpot cells plays the SUB synth at
+its own root; place jackpot cells one at a time, anywhere, as many as you
+like (adjacent cells form one region, separate ones fire separately, all on
+the SUB). The loop (Bars long) is simulated from the seed and repeats
+until an edit or a reroll changes it. It has no seam: balls still bouncing
+at the loop's end land on into its start. A field busier than the loop's
+note budget loses its softest hits, spread over the whole loop. The header reads ON/OFF (MUTE when the focused synth is
+muted), the focus (DROP or SUB), the focused synth's patch and root, and the scale on
+its first row; the loop bars, the seed (a `*` when frozen), the rate, the
+step and the bounce on its second. Scale is what the rows walk: GLOB (the
+main menu's scale and root; chromatic while the quantizer is off), CHRD (the
+playing progression chord's scale and root, GLOB while no chord is applied),
+or one of the drop's own scales on its Root (CHRM, MAJ, MIN, DOR, PHRY, LYD,
+MIXO, mPNT, MPNT, HMIN, LOCR, WHOL). Step (R+1 to R+4) is how many scale
+degrees each row up adds. Bounce is how much speed a ball keeps at each bounce on a plain or
+split segment, and with it each bounce's air time against the last: B.50
+halves it every bounce (after the one-beat first fall: 1, 1/2, 1/4, 1/8
+beat), B.70 is the default, B.71 halves it every second bounce, B.85 rolls
+into long trills. The
+screen opens with the cursor on ON/OFF. The boot field is a floor under the
+spawner and a jackpot cell above it, so ON plays at once.
+
+| Input | Action |
+|---|---|
+| Encoder turn, browsing | Move the cursor over the header fields (ON/OFF, focus, root, scale, bars, seed, rate, step, bounce), then the cells, row by row |
+| SHOULDER (hold) + encoder turn | Move the cursor by rows: down from the header lands on the top row under the spawner, up from the top row returns to ON/OFF |
+| Encoder click | Enter / leave editing |
+| Encoder turn, editing | A header field: change its value (the seed field rerolls). A cell: rotate the segment there (8 angles) |
+| Button 0 (tap) | Place a plain segment on the cursor cell, or remove the one there |
+| Button 0 hold + turn | Rotate the segment under the cursor |
+| SHIFT + turn | Cycle the segment's type: plain, split (a rod across the bar: balls leave left or right by its ratio), damp (dotted: ends the ball) |
+| SHIFT + Button 0 hold + turn | On a split segment: its ratio, 5 % steps; the rod moves with it, its distance from the bar's left end (top end when vertical) being the share sent left (the release then leaves the seed alone) |
+| Button 1 (tap) | Focus the other synth (DROP / SUB): what the patch gesture, the root field and the Layer entry address |
+| Button 1 hold + turn | Cycle the focused synth's patch |
+| Button 2 (tap) | Place a jackpot cell on the cursor, or remove the one there |
+| Button 0 (hold) | Play / stop, unless the hold turned something |
+| Button 3 (tap) | Menu |
+| SHIFT + Button 0 (press / hold) | Reroll the seed / freeze or unfreeze it, on the release |
+| SHIFT + Button 1 | The ADSR editor on the focused synth; Button 3 cycles to EG1, filter, LFO, LFO2 and DIST as on every instrument |
+| SHIFT + Button 3 | The Layer page's DROP or SUB entry, the focused synth's own: Level, Key, Mute, Solo, ClrSolo, Unison, Gate, Glide |
+| SHIFT + Button 2 | Cursor on a segment: open its popup, titled with the cell (`SEG C<col> R<row>`, row 1 at the top). Pitch: semitones added to the row's note, 1 per detent, +/- `SEQ_STEP_PITCH_OFS_MAX`. Vel: points added to the hit's velocity, 5 per detent, +/- `SEQ_STEP_VEL_ADJ_MAX` (the sum stays within 0..100 %, so a low enough value silences the hit). Turn, click and close as in the Step Trig popup: Button 0 (tap or hold), Button 3 (tap) or SHIFT + Button 2 close it. It closes on its own when the segment goes |
 
 ## Drone screens
 
@@ -258,11 +391,12 @@ Both are a scrollable parameter list.
 | Encoder turn, browsing | Move the cursor (clamped) |
 | Encoder click | Enter / leave editing. Normal drone, STUTTER row: open the stutter drone |
 | Encoder turn, editing | Change the value |
-| Button 1 hold + turn | Cycle the drone's patch |
+| Button 1 hold + turn | Cycle the drone's patch; the full patch name shows in a banner while the button is held |
 | Button 0 (hold) | Play / stop. A tap does nothing |
 | Button 2 | Ignored |
 | Button 3 (tap) | Menu (the way back to the normal drone from the stutter drone) |
-| SHIFT + Button 1 | Open the ADSR editor on the drone. Editors then cycle EG0, EG1, Filter, LFO, DIST |
+| SHIFT + Button 3 | The Layer page's STUTTER or DRONE entry: the Unison dive for the drone's main synth |
+| SHIFT + Button 1 | Open the ADSR editor on the drone. Editors then cycle EG0, EG1, Filter, LFO1, LFO2 (while open), DIST |
 
 Each drone's PATCH row names its patch and, while editing, cycles the same
 patch list as Button 1 hold + turn. On the stutter drone, LEVEL and DUCK set
